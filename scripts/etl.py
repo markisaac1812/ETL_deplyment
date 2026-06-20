@@ -1,11 +1,20 @@
 import argparse
-import sqlite3
-from pathlib import Path
-
+from sqlalchemy import create_engine
+from dotenv import load_dotenv
 import pandas as pd
 import requests
+import os
+
+load_dotenv()
 
 API_URL = "https://api.freeapi.app/api/v1/public/randomusers"
+DATABASE_URL_EXAMPLE="postgres://username:password@service_name:5432/database_name"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+engine = create_engine(DATABASE_URL)
 
 def extract_data(page: int | None = None, limit: int | None = None) -> dict:
 	params = {}
@@ -103,21 +112,26 @@ def transform_data(api_data: dict) -> pd.DataFrame:
 	ordered_frame["registered_age"] = pd.to_numeric(ordered_frame["registered_age"], errors="coerce")
 
 	return ordered_frame
+def load_data(frame: pd.DataFrame,
+              page: int | None = None,
+              limit: int | None = None) -> None:
 
+    if frame.empty:
+        print("No records returned from the API.")
+        return
 
-def load_data(frame: pd.DataFrame, page: int | None = None, limit: int | None = None) -> None:
-	if frame.empty:
-		print("No records returned from the API.")
-		return
+    frame = frame.copy()
+    frame["source_page"] = page
+    frame["source_limit"] = limit
 
-	frame = frame.copy()
-	frame["source_page"] = page
-	frame["source_limit"] = limit
+    frame.to_sql(
+        "random_users",
+        engine,
+        if_exists="append",
+        index=False
+    )
 
-	with sqlite3.connect(DB_PATH) as connection:
-		frame.to_sql("random_users", connection, if_exists="append", index=False)
-
-	print(f"Loaded {len(frame)} rows into {DB_PATH}")
+    print(f"Loaded {len(frame)} rows into PostgreSQL")
 
 
 def run_etl(page: int | None = None, limit: int | None = None) -> None:
