@@ -63,16 +63,23 @@ RUN pip install -r requirements.txt
 
 ### So actually we have only 4 images 
 3 base images -> redis , -> postgres metadata , -> postgres for user
+
 1 custom image to build all airflow containers
 
 
 -----------------------------------------
 Airflow services
+
 airflow-apiserver
+
 airflow-scheduler
+
 airflow-worker
+
 airflow-triggerer
+
 airflow-dag-processor
+
 airflow-init
 
 All of them inherit:
@@ -83,7 +90,9 @@ x-airflow-common:
 and your Dockerfile is:
 
 FROM apache/airflow:3.2.2
+
 COPY requirements.txt .
+
 RUN pip install -r requirements.txt
 
 Offical airflow image + my req.txt -> my custom image
